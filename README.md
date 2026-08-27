@@ -22,16 +22,38 @@ Install the package from a NixOS configuration:
 }
 ```
 
-The daemon service is deliberately unavailable in this first distribution.
-The option exists so consumers can state the disabled policy explicitly, but
-enabling it fails evaluation until the complete client configuration, routing,
-DNS, firewall, and teardown contract is published:
+The NixOS module also installs the client-only system-D-Bus and polkit assets,
+the persistent protection guard, and the root daemon. Activation is deliberately
+host-only: it does not enable forwarding, LAN gateway mode, L2TP, or any server,
+control-plane, or node-agent component. The daemon receives both TOML files as
+systemd credentials; durable state is created only under the `state_directory`
+declared by the client TOML.
 
 ```nix
 {
-  services.null-kvn-client.enable = false;
+  programs.null-kvn-client = {
+    enable = true;
+    # Optional: pin another approved binary package.
+    # package = inputs.null-kvn-dist.packages.${pkgs.system}.null-kvn-client;
+  };
+
+  services.null-kvn-client = {
+    enable = true;
+    alwaysOn = true;
+    configFile = ./client.toml;
+    # productConfigFile defaults to the immutable file in the pinned package.
+  };
 }
 ```
+
+`configFile` must be evaluation-readable and must declare a normalized absolute
+state path below `/var/lib`; the module derives every parent `StateDirectory`
+component from it. Enrollment and other mutable owner-only state are not
+embedded in this public repository.
+
+The public flake does not enroll a device. Provision a one-use owner-issued
+bundle into the configured state directory before enabling the daemon. Never
+put an enrollment bundle, device key, or mutable catalog in the Nix store.
 
 ## Explicit update workflow
 

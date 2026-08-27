@@ -1,0 +1,8 @@
+state_directory = "/var/lib/null-kvn/client"
+tun_name = "nkvn0"
+metrics_listen = "127.0.0.1:9901"
+
+[[physical_egress]]
+family = "ipv4"
+interface = "eth0"
+gateway = "auto"

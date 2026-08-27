@@ -1,0 +1,9 @@
+schema = "null-kvn-client-product-v1"
+channel = "internal-beta"
+platform = "linux"
+runtime_resource_profile = "high-throughput"
+candidate_sha = "9bcad98c5b5c4f22b1350f7c46ba9639e3469e34"
+release_authority_public_keys_hex = [
+  "7240d3d5a8abf18e3c2559b26198d4db822060fd88615b21a1823d3c94ce0b4d",
+]
+packet_performance_tier = "development"

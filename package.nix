@@ -4,6 +4,7 @@
   fetchurl,
   coreutils,
   jq,
+  libxml2,
   openssl,
   release ? import ./release.nix,
 }:
@@ -38,73 +39,96 @@ stdenvNoCC.mkDerivation {
   nativeBuildInputs = [
     coreutils
     jq
+    libxml2
     openssl
   ];
 
   installPhase = ''
-    runHook preInstall
-    set -euo pipefail
+        runHook preInstall
+        set -euo pipefail
 
-    manifest=${manifest}
-    signature=${signature}
-    artifact=$src
-    public_key=${./distribution-ed25519-public.pem}
-    transcript="$TMPDIR/null-kvn-distribution-transcript"
-    canonical="$TMPDIR/null-kvn-release-manifest.canonical"
+        manifest=${manifest}
+        signature=${signature}
+        artifact=$src
+        public_key=${./distribution-ed25519-public.pem}
+        transcript="$TMPDIR/null-kvn-distribution-transcript"
+        canonical="$TMPDIR/null-kvn-release-manifest.canonical"
 
-    test -f "$manifest" && test ! -L "$manifest"
-    test -f "$signature" && test ! -L "$signature"
-    test -f "$artifact" && test ! -L "$artifact"
-    test "$(stat -c %s "$signature")" -eq 64
+        test -f "$manifest" && test ! -L "$manifest"
+        test -f "$signature" && test ! -L "$signature"
+        test -f "$artifact" && test ! -L "$artifact"
+        test "$(stat -c %s "$signature")" -eq 64
 
-    # The signature covers the exact manifest bytes, including its final LF.
-    printf 'null-kvn-distribution-v1\0' > "$transcript"
-    cat "$manifest" >> "$transcript"
-    openssl pkeyutl -verify -pubin -inkey "$public_key" -rawin \
-      -in "$transcript" -sigfile "$signature"
+        # The signature covers the exact manifest bytes, including its final LF.
+        printf 'null-kvn-distribution-v1\0' > "$transcript"
+        cat "$manifest" >> "$transcript"
+        openssl pkeyutl -verify -pubin -inkey "$public_key" -rawin \
+          -in "$transcript" -sigfile "$signature"
 
-    # jq's sorted compact form matches the producer's canonical JSON form.
-    jq -cS . "$manifest" > "$canonical"
-    cmp -s "$manifest" "$canonical"
+        # jq's sorted compact form matches the producer's canonical JSON form.
+        jq -cS . "$manifest" > "$canonical"
+        cmp -s "$manifest" "$canonical"
 
-    jq -e --arg release_id "${release.releaseId}" \
-      --arg version "${release.version}" \
-      --arg target "x86_64-unknown-linux-musl" '
-      (type == "object") and
-      ((keys | sort) == [
-        "artifacts", "channel", "createdUtc", "releaseId", "schema",
-        "sequence", "sourceCommit", "sourceTree", "target", "version"
-      ]) and
-      .schema == "null-kvn-distribution-v1" and
-      .channel == "internal-beta" and
-      .target == $target and
-      .releaseId == $release_id and
-      (.releaseId | test("^[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9]$")) and
-      (.createdUtc | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")) and
-      (.sourceCommit | test("^[0-9a-f]{40}$")) and
-      (.sourceTree | test("^[0-9a-f]{40}$")) and
-      (.releaseId | split("-") | last) == (.sourceTree[0:8]) and
-      (.version == $version) and
-      (.version | test("^20[0-9]{2}\\.(?:[1-9]|1[0-2])\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")) and
-      (.sequence | numbers | floor == . and . >= 1) and
-      (.artifacts | (type == "object" and (keys == ["client"]))) and
-      (.artifacts.client | (type == "object" and
-        (keys | sort) == ["bytes", "name", "sha256"] and
-        .name == "null-kvn-client" and
-        (.sha256 | test("^[0-9a-f]{64}$")) and
-        (.bytes | numbers | floor == . and . >= 1 and . <= 134217728)))
-    ' "$manifest"
+        jq -e --arg release_id "${release.releaseId}" \
+          --arg version "${release.version}" \
+          --arg target "x86_64-unknown-linux-musl" '
+          (type == "object") and
+          ((keys | sort) == [
+            "artifacts", "channel", "createdUtc", "releaseId", "schema",
+            "sequence", "sourceCommit", "sourceTree", "target", "version"
+          ]) and
+          .schema == "null-kvn-distribution-v1" and
+          .channel == "internal-beta" and
+          .target == $target and
+          .releaseId == $release_id and
+          (.releaseId | test("^[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9]$")) and
+          (.createdUtc | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")) and
+          (.sourceCommit | test("^[0-9a-f]{40}$")) and
+          (.sourceTree | test("^[0-9a-f]{40}$")) and
+          (.releaseId | split("-") | last) == (.sourceTree[0:8]) and
+          (.version == $version) and
+          (.version | test("^20[0-9]{2}\\.(?:[1-9]|1[0-2])\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")) and
+          (.sequence | numbers | floor == . and . >= 1) and
+          (.artifacts | (type == "object" and (keys == ["client"]))) and
+          (.artifacts.client | (type == "object" and
+            (keys | sort) == ["bytes", "name", "sha256"] and
+            .name == "null-kvn-client" and
+            (.sha256 | test("^[0-9a-f]{64}$")) and
+            (.bytes | numbers | floor == . and . >= 1 and . <= 134217728)))
+        ' "$manifest"
 
-    actual_sha256="$(sha256sum "$artifact" | cut -d ' ' -f 1)"
-    expected_sha256="$(jq -er '.artifacts.client.sha256' "$manifest")"
-    test "$actual_sha256" = "$expected_sha256"
-    actual_bytes="$(stat -c %s "$artifact")"
+        actual_sha256="$(sha256sum "$artifact" | cut -d ' ' -f 1)"
+        expected_sha256="$(jq -er '.artifacts.client.sha256' "$manifest")"
+        test "$actual_sha256" = "$expected_sha256"
+        actual_bytes="$(stat -c %s "$artifact")"
     expected_bytes="$(jq -er '.artifacts.client.bytes' "$manifest")"
     test "$actual_bytes" = "$expected_bytes"
 
+    grep -F 'candidate_sha = "${release.candidateSha}"' ${./product-config.toml}
+    grep -F '"${release.authorityPublicKeyHex}"' ${./product-config.toml}
+
     install -Dm555 "$artifact" "$out/bin/null-kvn-client"
-    test "$(find "$out" -type f -printf '%P\n')" = "bin/null-kvn-client"
-    runHook postInstall
+        install -Dm444 ${./product-config.toml} \
+          "$out/share/null-kvn/product-config.toml"
+        install -Dm444 ${./dbus/dev.nullkvn.Client1.conf} \
+          "$out/share/dbus-1/system.d/dev.nullkvn.Client1.conf"
+        install -Dm444 ${./polkit/dev.nullkvn.policy} \
+          "$out/share/polkit-1/actions/dev.nullkvn.policy"
+
+        test ! -e "$out/share/dbus-1/system-services/dev.nullkvn.Client1.service"
+        xmllint --nonet --noout \
+          "$out/share/dbus-1/system.d/dev.nullkvn.Client1.conf" \
+          "$out/share/polkit-1/actions/dev.nullkvn.policy"
+
+        find "$out" -type f -printf '%P\n' | sort > "$TMPDIR/installed-files"
+        printf '%s\n' \
+          bin/null-kvn-client \
+          share/dbus-1/system.d/dev.nullkvn.Client1.conf \
+          share/null-kvn/product-config.toml \
+          share/polkit-1/actions/dev.nullkvn.policy \
+          > "$TMPDIR/expected-files"
+        cmp "$TMPDIR/expected-files" "$TMPDIR/installed-files"
+        runHook postInstall
   '';
 
   meta = {

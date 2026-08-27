@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+  "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>Null KVN</vendor>
+  <vendor_url>https://github.com/fnltochka/null-kvn-dist</vendor_url>
+
+  <action id="dev.nullkvn.observe">
+    <description>Inspect the Null KVN client and export diagnostics</description>
+    <message>Authentication is required to inspect the Null KVN client</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+  </action>
+
+  <action id="dev.nullkvn.manage">
+    <description>Manage Null KVN networks and tunnel state</description>
+    <message>Authentication is required to manage Null KVN</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+</policyconfig>
