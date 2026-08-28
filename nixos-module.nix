@@ -141,7 +141,18 @@ in
     enable = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Enable the declarative NULL KVN client daemon and protection guard.";
+      description = "Enable the declarative NULL KVN client daemon.";
+    };
+
+    earlyProtection = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Install the finite protection guard before network-pre.target and make
+        the client daemon require it. The default keeps early boot soft: the
+        daemon still performs its own finite protection reconciliation when it
+        starts.
+      '';
     };
 
     alwaysOn = lib.mkEnableOption ''
@@ -179,6 +190,10 @@ in
           assertion = !service.alwaysOn || service.enable;
           message = "services.null-kvn-client.alwaysOn requires services.null-kvn-client.enable.";
         }
+        {
+          assertion = !service.earlyProtection || service.enable;
+          message = "services.null-kvn-client.earlyProtection requires services.null-kvn-client.enable.";
+        }
       ];
     }
     (lib.mkIf cfg.enable {
@@ -210,7 +225,7 @@ in
         Strict protection requires a working systemd-resolved stub.
       '';
 
-      systemd.services.null-kvn-client-guard = {
+      systemd.services.null-kvn-client-guard = lib.mkIf service.earlyProtection {
         description = "NULL KVN persistent client protection";
         path = [
           pkgs.coreutils
@@ -257,7 +272,7 @@ in
           pkgs.nftables
         ];
         wantedBy = [ "multi-user.target" ];
-        requires = [ "null-kvn-client-guard.service" ];
+        requires = lib.optionals service.earlyProtection [ "null-kvn-client-guard.service" ];
         wants = [
           "network-pre.target"
         ]
@@ -266,8 +281,8 @@ in
         after = [
           "dbus.socket"
           "network-pre.target"
-          "null-kvn-client-guard.service"
         ]
+        ++ lib.optionals service.earlyProtection [ "null-kvn-client-guard.service" ]
         ++ lib.optionals config.services.resolved.enable [ "systemd-resolved.service" ];
         restartTriggers = [
           service.configFile

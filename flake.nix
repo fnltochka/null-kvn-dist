@@ -45,6 +45,23 @@
                   services.null-kvn-client = {
                     enable = true;
                     alwaysOn = true;
+                    earlyProtection = true;
+                    configFile = ./tests/client.toml;
+                  };
+                }
+              ];
+            }).config;
+          softModuleConfig =
+            (nixpkgs.lib.nixosSystem {
+              inherit system;
+              modules = [
+                self.nixosModules.default
+                {
+                  nixpkgs.config.allowUnfree = true;
+                  programs.null-kvn-client.enable = true;
+                  services.resolved.enable = true;
+                  services.null-kvn-client = {
+                    enable = true;
                     configFile = ./tests/client.toml;
                   };
                 }
@@ -75,6 +92,7 @@
                 grep -F 'null-kvn-client' ${./package.nix}
                 grep -F 'license = lib.licenses.unfree' ${./package.nix}
                 grep -F 'default = false' ${./nixos-module.nix}
+                grep -F 'earlyProtection' ${./nixos-module.nix}
                 grep -F 'services.null-kvn-client' ${./nixos-module.nix}
                 grep -F 'LoadCredential' ${./nixos-module.nix}
                 grep -F 'StateDirectory' ${./nixos-module.nix}
@@ -91,6 +109,21 @@
                 nativeBuildInputs = [ pkgs.gnugrep ];
               }
               ''
+                test ${
+                  if builtins.hasAttr "null-kvn-client-guard" softModuleConfig.systemd.services then
+                    "false"
+                  else
+                    "true"
+                } = true
+                test ${nixpkgs.lib.escapeShellArg (builtins.toJSON softModuleConfig.systemd.services.null-kvn-client.requires)} = '[]'
+                test ${nixpkgs.lib.escapeShellArg (builtins.toJSON softModuleConfig.systemd.services.null-kvn-client.after)} = '["dbus.socket","network-pre.target","systemd-resolved.service"]'
+                test ${
+                  if builtins.hasAttr "null-kvn-client-guard" moduleConfig.systemd.services then "true" else "false"
+                } = true
+                test ${nixpkgs.lib.escapeShellArg (builtins.toJSON moduleConfig.systemd.services.null-kvn-client.requires)} = '["null-kvn-client-guard.service"]'
+                test ${nixpkgs.lib.escapeShellArg (builtins.toJSON moduleConfig.systemd.services.null-kvn-client.after)} = '["dbus.socket","network-pre.target","null-kvn-client-guard.service","systemd-resolved.service"]'
+                test ${nixpkgs.lib.escapeShellArg moduleConfig.systemd.services.null-kvn-client-guard.serviceConfig.Type} = oneshot
+                test ${nixpkgs.lib.escapeShellArg (builtins.toJSON moduleConfig.systemd.services.null-kvn-client-guard.requiredBy)} = '["network-pre.target"]'
                 test ${nixpkgs.lib.escapeShellArg (builtins.toJSON moduleConfig.systemd.services.null-kvn-client.serviceConfig.StateDirectory)} = \
                   '["null-kvn","null-kvn/client"]'
                 grep -F -- '--always-on' <<'EOF'

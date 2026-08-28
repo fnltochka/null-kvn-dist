@@ -22,12 +22,16 @@ Install the package from a NixOS configuration:
 }
 ```
 
-The NixOS module also installs the client-only system-D-Bus and polkit assets,
-the persistent protection guard, and the root daemon. Activation is deliberately
-host-only: it does not enable forwarding, LAN gateway mode, L2TP, or any server,
-control-plane, or node-agent component. The daemon receives both TOML files as
-systemd credentials; durable state is created only under the `state_directory`
-declared by the client TOML.
+The NixOS module also installs the client-only system-D-Bus and polkit assets
+and the root daemon. By default activation is soft: enabling the service does
+not create or require the early-boot protection guard. Set
+`services.null-kvn-client.earlyProtection = true` to install the finite guard
+before `network-pre.target`; the daemon then requires and starts after that
+guard. The daemon still performs its own finite protection reconciliation when
+it starts. Activation is deliberately host-only: it does not enable forwarding,
+LAN gateway mode, L2TP, or any server, control-plane, or node-agent component.
+The daemon receives both TOML files as systemd credentials; durable state is
+created only under the `state_directory` declared by the client TOML.
 
 ```nix
 {
@@ -40,6 +44,8 @@ declared by the client TOML.
   services.null-kvn-client = {
     enable = true;
     alwaysOn = true;
+    # Optional: install and require the finite early-boot protection guard.
+    # earlyProtection = true;
     configFile = ./client.toml;
     # productConfigFile defaults to the immutable file in the pinned package.
   };
