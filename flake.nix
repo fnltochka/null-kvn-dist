@@ -82,6 +82,8 @@
               '';
 
           client-module =
+            assert builtins.elem pkgs.nftables moduleConfig.systemd.services.null-kvn-client.path;
+            assert builtins.elem pkgs.nftables moduleConfig.systemd.services.null-kvn-client-guard.path;
             pkgs.runCommand "null-kvn-client-module"
               {
                 nativeBuildInputs = [ pkgs.gnugrep ];
