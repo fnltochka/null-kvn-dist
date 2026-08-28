@@ -71,6 +71,7 @@ stdenvNoCC.mkDerivation {
 
         jq -e --arg release_id "${release.releaseId}" \
           --arg version "${release.version}" \
+          --arg candidate_sha "${release.candidateSha}" \
           --arg target "x86_64-unknown-linux-musl" '
           (type == "object") and
           ((keys | sort) == [
@@ -83,7 +84,7 @@ stdenvNoCC.mkDerivation {
           .releaseId == $release_id and
           (.releaseId | test("^[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9]$")) and
           (.createdUtc | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")) and
-          (.sourceCommit | test("^[0-9a-f]{40}$")) and
+          .sourceCommit == $candidate_sha and
           (.sourceTree | test("^[0-9a-f]{40}$")) and
           (.releaseId | split("-") | last) == (.sourceTree[0:8]) and
           (.version == $version) and
