@@ -212,7 +212,10 @@ in
 
       systemd.services.null-kvn-client-guard = {
         description = "NULL KVN persistent client protection";
-        path = [ pkgs.nftables ];
+        path = [
+          pkgs.coreutils
+          pkgs.nftables
+        ];
         requiredBy = [ "network-pre.target" ];
         before = [
           "network-pre.target"
@@ -249,7 +252,10 @@ in
 
       systemd.services.null-kvn-client = {
         description = "NULL KVN client daemon";
-        path = [ pkgs.nftables ];
+        path = [
+          pkgs.coreutils
+          pkgs.nftables
+        ];
         wantedBy = [ "multi-user.target" ];
         requires = [ "null-kvn-client-guard.service" ];
         wants = [
