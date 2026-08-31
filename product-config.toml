@@ -2,7 +2,7 @@ schema = "null-kvn-client-product-v1"
 channel = "internal-beta"
 platform = "linux"
 runtime_resource_profile = "high-throughput"
-candidate_sha = "9be1c0491b9ace9b979c6a475ae0bffe478ebd24"
+candidate_sha = "2f1eeb1af9d4a8398048b8236eba8267b2bdb5c2"
 release_authority_public_keys_hex = [
   "7240d3d5a8abf18e3c2559b26198d4db822060fd88615b21a1823d3c94ce0b4d",
 ]
